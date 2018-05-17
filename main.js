@@ -1,18 +1,22 @@
 var game = new Phaser.Game(1820, 600, Phaser.CANVAS, "game", {
 	preload: preload,
 	create: create,
-	update: update
+	update: update,
+	render: render
 });
 var cos;
 var len = 1;
 var pig;
+var machinesSpeed = 4;
 var spaceKey;
-var jumpSound, falling, getStarSound;
+var jumpSound, falling, getStarSound,loseLifeSound;
 var leftarrow, rightarrow;
 var heart, background,textLives;
 var lives=3;
 var score = 0,
 	totalScore = 0;
+var randomNumberSecond;
+var testAnimationInstance;
 var scoreText, levelText, totalScoreText;
 var getItem;
 var points;
@@ -22,7 +26,7 @@ var fontColor = "#25A2F4";
 var machines;
 var Table = new Array("1", "2", "3");
 
-var bodyVel = -500; //star Speed
+var bodyVel = -200; //star Speed
 var bgVel = 2; //bg speed
 var levelPoints = 0;
 
@@ -97,6 +101,10 @@ function preload() {
 		449,
 		12
 	);
+	this.load.image("mach6", "https://rawgit.com/MEJSIK/Game/master/mach6.png");
+	this.load.image("mach7", "https://rawgit.com/MEJSIK/Game/master/mach7.png");
+	this.load.image("mach8", "https://rawgit.com/MEJSIK/Game/master/mach8.png");
+	this.load.image("mach9", "https://rawgit.com/MEJSIK/Game/master/mach9.png");
 
 	// Background
 	this.load.image(
@@ -109,8 +117,7 @@ function preload() {
 
 	//Star
 	this.load.image(
-		"star",
-		"https://static1.squarespace.com/static/544c1964e4b0dd27d701dd68/t/55f85ed4e4b0f3e154b9ecb0/1442340582763/"
+		"star","https://rawgit.com/MEJSIK/Game/master/starImg.png"
 	);
 
 	/* #### SOUNDS ####*/
@@ -128,6 +135,12 @@ function preload() {
 	game.load.audio(
 		"getStar",
 		"https://rawgit.com/MEJSIK/Game/master/getStar.mp3"
+	);
+	
+	//Lose Live sound
+	game.load.audio(
+		"loseLife",
+		"https://rawgit.com/MEJSIK/Game/master/loseLive.mp3"
 	);
 }
 
@@ -148,7 +161,7 @@ function create() {
 	leftarrow = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
 	
 
-	//rightarrow
+	//rightarrow 
 	rightarrow = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
 	
 	
@@ -165,33 +178,56 @@ function create() {
 
 	// Create PIG
 	pig = this.add.sprite(60, this.world.centerY, "pig");
+	
 	pig.animations.add("fly");
 
 	pig.animations.play("fly", 20, true);
+	
 
 	//pig.body.gravity.y = 100;
 	pig.anchor.setTo(0.5, 0.5);
-	this.game.physics.arcade.enable(pig);
+	this.game.physics.enable(pig,Phaser.Physics.ARCADE);
+	pig.body.setSize(70, 40, 15, 0);
+	pig.body.bounce.setTo(1,1);
+	pig.body.collideWorldBound = true;
+	pig.alpha = 1;
+	
 
 	pig.body.gravity.y = 1000;
 
 	/* CREATING MACHINES*/
 	machines = game.add.group();
 	
-
+	 
+	//CREATING STARS
+	//game.time.events.loop(Phaser.Timer.SECOND*Math.random()*game.rnd.integerInRange(0,8), createStar,this);
 	
-	//machines.enableBody = true;
-	//machines.physicsBodyType = Phaser.Physics.ARCADE;
+	switch(level){
+		case 1:
+			randomNumberSecond = game.rnd.integerInRange(600,1500);
+	}
+	setInterval(createStar, randomNumberSecond);
+	
+	
+
+	/* TO ENABLE COLLISION */
+	machines.enableBody = true;
+	machines.physicsBodyType = Phaser.Physics.ARCADE;
+	
 	machines.callAll("anchor.setTo","anchor", 0.5);
+	machines.callAll("scale.setTo", "scale",0.7);
+	machines.callAll('animations.add','move', null, 7,true, true);
+	machines.callAll('play',null,'move');
 	
 	// for (var i = 0; i < 50; i++)
-	// {
+	// { 
 	// machines.create(game.world.randomX, game.world.randomY, 'mach1', 0);
 	// }
 	
 
 	//stars
 	stars = game.add.group();
+	
 
 	stars.enableBody = true;
 
@@ -262,9 +298,14 @@ function create() {
 	//getStar
 	this.getStarSound = game.add.audio("getStar");
 	this.getStarSound.volume = 0.2;
+	
+	//loseLife
+	this.loseLifeSound = game.add.audio('loseLife');
+	this.loseLifeSound.volume = 0.2;
 }
 
 function update() {
+	
 	//Touch pointer
 	this.game.input.onDown.add(jump, this);
 	
@@ -276,14 +317,16 @@ function update() {
 
 	if (pig.angle < 20) pig.angle += 1;
 	if (pig.y > 600) {
+		this.loseLifeSound.play();
 		lives--;
+		opacityAnimation();
 		if(lives < 0){
 			game.paused = true;
 			restartGame();
 			
 			}else{
 				textLives.setText("x"+lives); 
-				pig.y = 300;
+				pig.y = 100;
 			}
 	
 		
@@ -294,12 +337,7 @@ function update() {
 	// Update the variable that tracks total time elapsed
 	timeSinceLastIncrement += game.time.elapsed;
 	//console.log(timeSinceLastIncrement);
-	if (timeSinceLastIncrement % 10 == 0) {
-		// eg, update every 10 seconds
-		timeSinceLastIncrent = 0; 
-
-		createStar();
-	}
+	
 	if (timeSinceLastIncrement >= 2000) {
 		//console.log("przed: "+timeSinceLastIncrement);
 		timeSinceLastIncrement = 0;
@@ -308,44 +346,55 @@ function update() {
 	}
 	//  Run collision
 	game.physics.arcade.overlap(pig, stars, collisionHandler, null, this);
-	//game.physics.arcade.overlap(pig, machines, colisionMach, null, this);
+	game.physics.arcade.overlap(pig, machines, colisionMach, null, this);
 
 	function colisionMach() {
 		//game.paused = true;
-			console.log(lives);
-		lives--;
+		//game.time.events.loop(Phaser.Timer.SECOND*Math.random()*2, createStar,this);
+// 			console.log(lives);
+		this.loseLifeSound.play();
+		opacityAnimation();
+		pig.y = 100;
+		
+		 lives--;
 		if(lives<0){
 			game.paused = true;
 			restartGame();
 			}
 		
-		livesText.setText("x"+lives);
-		
+ 		textLives.setText("x"+lives); 
+		 
 	}
 
 	
 
 	/*  MACHINES POS */
-	machines.x -= 4;
+	machines.x -= machinesSpeed;
 
 	// if (machines.x < 0)
 	// {
 	//     machines.x = game.world.width;
 	// }
+	
+
 }
+
+function render(){
+	// machines.forEach(this.game.debug.body, this.game.debug);
+	// game.debug.body(pig);
+};
 function createMachine() {
 		
 
-		switch (game.rnd.integerInRange(0, 4)) {
+		switch (game.rnd.integerInRange(0,8)) {
 			case 0:
 				var machine = machines.create(game.width*len*0.5, 100, "mach1",0);
-				machine.scale.setTo(0.7);
-				machine.animations.add("move", null, 7,true, true);
-		machine.animations.play("move",true);
+				machine.body.setSize(380, 100, 10, 0);
 				len++;
 				break;
 			case 1:
 				var machine = machines.create(game.width*len*0.5, 250, "mach2",0);
+				machine.body.setSize(230, 300, 90, 150);
 				machine.scale.setTo(0.7);
 				machine.animations.add("move", null, 7,true, true);
 		machine.animations.play("move",true);
@@ -353,6 +402,7 @@ function createMachine() {
 				break;
 			case 2:
 				var machine = machines.create(game.width*len*0.5, 320, "mach3",0);
+				machine.body.setSize(400, 300, 80, 70);
 				machine.scale.setTo(0.7);
 				machine.animations.add("move", null, 7,true, true);
 		machine.animations.play("move",true);
@@ -360,6 +410,7 @@ function createMachine() {
 				break;
 				case 3:
 				var machine = machines.create(game.width*len*0.5,  250, "mach4",0);
+				machine.body.setSize(300, 400, 60, 50);
 				machine.scale.setTo(0.7);
 				machine.animations.add("move", null, 7,true, true);
 		machine.animations.play("move",true);
@@ -367,19 +418,44 @@ function createMachine() {
 				break;
 				case 4:
 				var machine = machines.create(game.width*len*0.5,  300, "mach5",0);
+				machine.body.setSize(180, 350, 40, 45);
 				machine.scale.setTo(0.7);
 				machine.animations.add("move", null, 7,true, true); 
 		machine.animations.play("move",true);
 				len++;
 				break;
-				defautl:
+				case 5:
+				var machine = machines.create(game.width*len*0.5,  350, "mach6",0);
+				machine.body.setSize(100, 350, 25, 5);
+				len++;
+				break;
+				case 6:
+				var machine = machines.create(game.width*len*0.5,  100, "mach7",0);
+				machine.body.setSize(40, 20, 40, 20);
+				machine.scale.setTo(3);
+				len++;
+				break;
+				case 7:
+				var machine = machines.create(game.width*len*0.5,  440, "mach8",0);
+				machine.body.setSize(50, 50);
+				machine.scale.setTo(3);
+				len++;
+				break;
+				case 8:
+				var machine = machines.create(game.width*len*0.5,  300, "mach9",0);
+				machine.body.setSize(100,100,0,20);
+				machine.scale.setTo(3);				
+				len++;
+				break;
+				default:
 		 		len++;
+				break;
 		}
 	
 	}
 function createStar() {
-	var star = stars.create(game.width, 150 + game.world.randomY, "star");
-	star.scale.setTo(0.1);
+	var star = stars.create(game.width, 150 + (game.world.randomY)-150, "star");
+	star.scale.setTo(0.2);
 	moveIndividual(star);
 }
 function moveIndividual(moved) {
@@ -397,13 +473,15 @@ function collisionHandler(pig, star) {
 	totalScoreText.setText("TOTAL SCORE:" + totalScore);
 
 
-	if (score >= 400 * level) {
+	if (score >= 50 * level) {
 		level++;
 		levelText.setText("Level"+level);
 		bodyVel -= 200;
 		bgVel *= 2;
+		machinesSpeed +=2;
 		score = 0;
 	}
+	
 }
 
 function jump() {
@@ -418,19 +496,19 @@ function jump() {
 }
 
 function restartGame() {
-	var restarGame = game.add
-		.text(
-			game.world.centerX,
-			game.world.centerY,
-			"Press ENTER to start game again !!!",
-			{
-				fontSize: "120",
-				fill: "#fff"
-			}
-		)
-		.anchor.setTo(0.5);
+	// var restarGame = game.add
+	// 	.text(
+	// 		game.world.centerX,
+	// 		game.world.centerY,
+	// 		"Press ENTER to start game again !!!",
+	// 		{
+	// 			fontSize: "120",
+	// 			fill: "#fff"
+	// 		}
+	// 	)
+	// 	.anchor.setTo(0.5);
 
-	game.input.keyboard.onUpCallback = function(e) {};
+	game.input.keyboard.onUpCallback = function(e) {
 		this.game.input.onDown.add(function(){
 			game.paused = false;
 			game.state.restart();
@@ -438,14 +516,30 @@ function restartGame() {
 			level=1;
 			bodyVel = -500;
 			bgVel = 2;
+			totalScore = 0;
+			score =0;
+			machines.x =0; 
+			machines.foreach(remove.this);
 		});
-		// if (e.keyCode == 13) {
-		// 	game.paused = false;
-		// 	game.state.restart();
-		// 	lives=3;
-		// 	level=1;
-		// 	bodyVel = -500;
-		// 	bgVel = 2;
-		// }
-	// };
+		if (e.keyCode == 13) {
+			game.paused = false;
+			game.state.restart();
+			lives=3;
+			level=1;
+			bodyVel = -500;
+			bgVel = 2;
+	totalScore = 0;
+			score =0;
+			machines.x =0; 
+			machines.foreach(remove.this);
+		}
+	};
 }
+
+
+function opacityAnimation(){
+	//machines.enableBody = false;
+	var pigAlpha = game.add.tween(pig).to( { alpha: 0.2}, 2000, Phaser.Easing.Bounce.Out, true,0, 1,true);
+	pigAlpha.yoyo(true,3000); 
+	
+};

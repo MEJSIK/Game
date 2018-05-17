@@ -13,3 +13,9 @@ Actual DEMO: https://rawgit.com/MEJSIK/Game/master/index.html
   - Added Lifes
   - Added levels difficulty
   
+**v1.3a**
+  - Added colision between pig and machines.
+  - Optimalized first step
+  - More control of creating stars
+
+  

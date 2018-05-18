@@ -7,16 +7,18 @@ var game = new Phaser.Game(1820, 600, Phaser.CANVAS, "game", {
 var cos;
 var len = 1;
 var pig;
+var startCounter = 3;
 var machinesSpeed = 4;
 var spaceKey;
 var jumpSound, falling, getStarSound,loseLifeSound;
 var leftarrow, rightarrow;
-var heart, background,textLives;
+var heart, background,textLives,totalTime=0;
 var lives=3;
 var score = 0,
 	totalScore = 0;
 var randomNumberSecond;
 var testAnimationInstance;
+var timer;
 var scoreText, levelText, totalScoreText;
 var getItem;
 var points;
@@ -188,6 +190,7 @@ function create() {
 	pig.anchor.setTo(0.5, 0.5);
 	this.game.physics.enable(pig,Phaser.Physics.ARCADE);
 	pig.body.setSize(70, 40, 15, 0);
+	pig.body.enable = true;
 	pig.body.bounce.setTo(1,1);
 	pig.body.collideWorldBound = true;
 	pig.alpha = 1;
@@ -302,14 +305,31 @@ function create() {
 	//loseLife
 	this.loseLifeSound = game.add.audio('loseLife');
 	this.loseLifeSound.volume = 0.2;
+	
+
+}
+
+function updateCounter() {
+
+    totalTime++; 
+	console.log(totalTime);
+	if(totalTime % 2 == 0){
+		totalTime == 0;
+		pig.body.setSize(70, 40, 15, 1);
+		timer.stop();
+	}
+	// game.add.tween(pig).to( {setSize: (80, 100, 10, -500)}, 2000, Phaser.Easing.Bounce.Out, true,0, 1,true).yoyo(true,3000); 
+	
+
 }
 
 function update() {
 	
 	//Touch pointer
-	this.game.input.onDown.add(jump, this);
 	
-	if (leftarrow.isDown) pig.x-=2;
+	 game.input.onDown.add(jump, this);
+	
+	if (leftarrow.isDown) pig.x-=2; 
 		else if(rightarrow.isDown) pig.x+=2;
 	 
 	//background moving left
@@ -340,7 +360,7 @@ function update() {
 	
 	if (timeSinceLastIncrement >= 2000) {
 		//console.log("przed: "+timeSinceLastIncrement);
-		timeSinceLastIncrement = 0;
+		timeSinceLastIncrement = 0; 
 		//console.log("po:"+timeSinceLastIncrement);
 		createMachine();
 	}
@@ -349,13 +369,28 @@ function update() {
 	game.physics.arcade.overlap(pig, machines, colisionMach, null, this);
 
 	function colisionMach() {
+		pig.body.setSize(10,10,0,-700);
+			 //Timer
+	//  Create our Timer
+   timer = game.time.create(false);
+   //  Set a TimerEvent to occur after 2 seconds
+   timer.loop(1500, updateCounter, this);
+   //  Start the timer running - this is important!
+   //  It won't start automatically, allowing you to hook it to button events and the like.
+   timer.start();
+		 
+		
 		//game.paused = true;
 		//game.time.events.loop(Phaser.Timer.SECOND*Math.random()*2, createStar,this);
 // 			console.log(lives);
 		this.loseLifeSound.play();
 		opacityAnimation();
 		pig.y = 100;
-		
+		//var afterCollPig = game.add.tween(pig).to( {body.enable: false}, 2000, Phaser.Easing.Bounce.Out);
+	//afterCollPig.yoyo(true,3000); 
+	
+	
+		 
 		 lives--;
 		if(lives<0){
 			game.paused = true;
@@ -380,9 +415,9 @@ function update() {
 }
 
 function render(){
-	// machines.forEach(this.game.debug.body, this.game.debug);
-	// game.debug.body(pig);
-};
+	machines.forEach(this.game.debug.body, this.game.debug);
+	game.debug.body(pig);
+}; 
 function createMachine() {
 		
 
